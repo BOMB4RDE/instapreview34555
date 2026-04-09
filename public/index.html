@@ -146,29 +146,34 @@ function render(){
 
 // 🧠 DRAG SYSTEM PRO
 let dragEl = null;
-let preview = null;
 let placeholder = null;
+let preview = null;
+let startIndex = null;
 
 function enableDrag() {
   const grid = document.getElementById("grid");
 
-  grid.querySelectorAll(".post").forEach((el) => {
+  grid.querySelectorAll(".post").forEach((el, index) => {
 
     el.addEventListener("mousedown", (e) => {
       dragEl = el;
+      startIndex = index;
 
-      // preview
+      // 👻 preview
       preview = el.cloneNode(true);
       preview.classList.add("drag-preview");
       document.body.appendChild(preview);
 
       movePreview(e);
 
-      // placeholder
+      // 🧩 placeholder EXACT SAME SIZE
       placeholder = document.createElement("div");
       placeholder.className = "post placeholder";
+      placeholder.style.width = el.offsetWidth + "px";
+      placeholder.style.height = el.offsetHeight + "px";
 
-      el.classList.add("dragging");
+      // 🔥 IMPORTANT : remplacer direct
+      grid.replaceChild(placeholder, el);
 
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
@@ -185,12 +190,14 @@ function onMove(e) {
   movePreview(e);
 
   const grid = document.getElementById("grid");
-  const items = [...grid.querySelectorAll(".post:not(.dragging)")];
+  const items = [...grid.children];
 
   let closest = null;
   let minDist = Infinity;
 
   items.forEach(item => {
+    if(item === placeholder) return;
+
     const rect = item.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -204,21 +211,24 @@ function onMove(e) {
   });
 
   if (closest) {
-    grid.insertBefore(placeholder, closest);
+    const rect = closest.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+
+    if (before) {
+      grid.insertBefore(placeholder, closest);
+    } else {
+      grid.insertBefore(placeholder, closest.nextSibling);
+    }
   }
 }
 
 function onUp() {
   const grid = document.getElementById("grid");
 
-  if (placeholder && dragEl) {
-    grid.insertBefore(dragEl, placeholder);
-  }
-
-  dragEl.classList.remove("dragging");
+  // remettre l'élément à la place du placeholder
+  grid.replaceChild(dragEl, placeholder);
 
   preview.remove();
-  placeholder.remove();
 
   preview = null;
   placeholder = null;
