@@ -83,7 +83,7 @@ img, video {
 let posts = [];
 
 async function loadPosts(){
-  const res = await fetch("http://localhost:3000/posts");
+  const res = await fetch("/api/posts");
   posts = await res.json();
   render();
 }
