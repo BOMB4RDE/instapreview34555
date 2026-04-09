@@ -54,6 +54,52 @@ img, video {
 .dragging {
   opacity: 0.3;
 }
+
+  .carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.carousel-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.carousel-track img {
+  min-width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* flèches */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.5);
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: none;
+}
+
+.carousel:hover .carousel-btn {
+  display: block;
+}
+
+.carousel-btn.left {
+  left: 5px;
+}
+
+.carousel-btn.right {
+  right: 5px;
+}
 </style>
 </head>
 
@@ -84,19 +130,48 @@ function render(){
     div.draggable = true;
 
     // 🖼 IMAGE / CAROUSEL / VIDEO
-    if(post.media.length > 1){
-      div.innerHTML = `
-        <div class="carousel">
-          ${post.media.map(m => `<img src="${m}">`).join("")}
-        </div>
-      `;
-    }
+   if(post.media.length > 1){
+  div.innerHTML = `
+    <div class="carousel">
+      <div class="carousel-track">
+        ${post.media.map(m => `<img src="${m}">`).join("")}
+      </div>
+
+      <button class="carousel-btn left">‹</button>
+      <button class="carousel-btn right">›</button>
+    </div>
+  `;
+}
     else if(post.type === "video"){
       div.innerHTML = `<video src="${post.media[0]}" autoplay muted loop></video>`;
     }
     else{
       div.innerHTML = `<img src="${post.media[0]}">`;
     }
+    if(post.media.length > 1){
+  const track = div.querySelector(".carousel-track");
+  const leftBtn = div.querySelector(".left");
+  const rightBtn = div.querySelector(".right");
+
+  let currentIndex = 0;
+  const total = post.media.length;
+
+  function updateCarousel(){
+    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+  }
+
+  leftBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    currentIndex = Math.max(0, currentIndex - 1);
+    updateCarousel();
+  });
+
+  rightBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    currentIndex = Math.min(total - 1, currentIndex + 1);
+    updateCarousel();
+  });
+}
 
     // DRAG EVENTS
     div.addEventListener("dragstart", () => {
