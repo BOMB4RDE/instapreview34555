@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Instagram Grid Widget</title>
 
 <style>
 body {
@@ -11,17 +10,9 @@ body {
   font-family: sans-serif;
 }
 
-.header {
-  padding: 10px;
-}
-
-button {
-  padding: 6px 12px;
-  border: none;
-  background: black;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
+/* empêche sélection texte */
+* {
+  user-select: none;
 }
 
 .grid {
@@ -32,23 +23,12 @@ button {
 }
 
 .post {
-  position: relative;
   aspect-ratio: 1;
-  overflow: hidden;
   border-radius: 12px;
+  overflow: hidden;
+  background: #ddd;
+  position: relative;
   cursor: grab;
-}
-
-.post:hover::after {
-  content: attr(data-title);
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 5px;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  font-size: 12px;
 }
 
 /* media */
@@ -62,199 +42,87 @@ img, video {
 .carousel {
   display: flex;
   overflow-x: auto;
+  scroll-snap-type: x mandatory;
 }
 
 .carousel img {
   min-width: 100%;
+  scroll-snap-align: start;
 }
 
-/* drag UX */
-.post.dragging {
-  opacity: 0;
-}
-
-.drag-preview {
-  position: fixed;
-  pointer-events: none;
-  z-index: 1000;
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 12px;
-  transform: scale(1.05);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-
-.placeholder {
-  background: rgba(0,0,0,0.1);
-  border-radius: 12px;
-}
-
-.grid .post {
-  transition: all 0.2s ease;
+/* drag */
+.dragging {
+  opacity: 0.3;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-  <button onclick="loadPosts()">Refresh</button>
-</div>
-
 <div class="grid" id="grid"></div>
 
 <script>
 
 let posts = [];
+let draggedIndex = null;
 
-// 🔄 LOAD DATA FROM API
+// LOAD DATA
 async function loadPosts(){
   const res = await fetch("/api/posts");
   posts = await res.json();
   render();
 }
 
-// 🎨 RENDER GRID
+// RENDER
 function render(){
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
 
-  posts.forEach((post, i) => {
+  posts.forEach((post, index) => {
     const div = document.createElement("div");
     div.className = "post";
-    div.dataset.index = i;
-    div.dataset.title = post.title;
+    div.draggable = true;
 
-    if(post.type === "carousel"){
-      div.innerHTML = `<div class="carousel">
-        ${post.media.map(m => `<img src="${m}">`).join("")}
-      </div>`;
+    // 🖼 IMAGE / CAROUSEL / VIDEO
+    if(post.media.length > 1){
+      div.innerHTML = `
+        <div class="carousel">
+          ${post.media.map(m => `<img src="${m}">`).join("")}
+        </div>
+      `;
     }
     else if(post.type === "video"){
       div.innerHTML = `<video src="${post.media[0]}" autoplay muted loop></video>`;
     }
-    else {
+    else{
       div.innerHTML = `<img src="${post.media[0]}">`;
     }
 
+    // DRAG EVENTS
+    div.addEventListener("dragstart", () => {
+      draggedIndex = index;
+      div.classList.add("dragging");
+    });
+
+    div.addEventListener("dragend", () => {
+      div.classList.remove("dragging");
+    });
+
+    div.addEventListener("dragover", (e) => {
+      e.preventDefault();
+    });
+
+    div.addEventListener("drop", () => {
+      const temp = posts[draggedIndex];
+      posts.splice(draggedIndex, 1);
+      posts.splice(index, 0, temp);
+      render();
+    });
+
     grid.appendChild(div);
   });
-
-  enableDrag();
 }
 
-// 🧠 DRAG SYSTEM PRO
-let dragEl = null;
-let placeholder = null;
-let preview = null;
-let startIndex = null;
-
-function enableDrag() {
-  const grid = document.getElementById("grid");
-
-  grid.querySelectorAll(".post").forEach((el, index) => {
-
-    el.addEventListener("mousedown", (e) => {
-      dragEl = el;
-      startIndex = index;
-
-      // 👻 preview
-      preview = el.cloneNode(true);
-      preview.classList.add("drag-preview");
-      document.body.appendChild(preview);
-
-      movePreview(e);
-
-      // 🧩 placeholder EXACT SAME SIZE
-      placeholder = document.createElement("div");
-      placeholder.className = "post placeholder";
-      placeholder.style.width = el.offsetWidth + "px";
-      placeholder.style.height = el.offsetHeight + "px";
-
-      // 🔥 IMPORTANT : remplacer direct
-      grid.replaceChild(placeholder, el);
-
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-    });
-  });
-}
-
-function movePreview(e) {
-  preview.style.left = e.clientX - 60 + "px";
-  preview.style.top = e.clientY - 60 + "px";
-}
-
-function onMove(e) {
-  movePreview(e);
-
-  const grid = document.getElementById("grid");
-  const items = [...grid.children];
-
-  let closest = null;
-  let minDist = Infinity;
-
-  items.forEach(item => {
-    if(item === placeholder) return;
-
-    const rect = item.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-
-    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
-
-    if (dist < minDist) {
-      minDist = dist;
-      closest = item;
-    }
-  });
-
-  if (closest) {
-    const rect = closest.getBoundingClientRect();
-    const before = e.clientY < rect.top + rect.height / 2;
-
-    if (before) {
-      grid.insertBefore(placeholder, closest);
-    } else {
-      grid.insertBefore(placeholder, closest.nextSibling);
-    }
-  }
-}
-
-function onUp() {
-  const grid = document.getElementById("grid");
-
-  // remettre l'élément à la place du placeholder
-  grid.replaceChild(dragEl, placeholder);
-
-  preview.remove();
-
-  preview = null;
-  placeholder = null;
-  dragEl = null;
-
-  updateOrder();
-
-  document.removeEventListener("mousemove", onMove);
-  document.removeEventListener("mouseup", onUp);
-}
-
-// 🔄 UPDATE ORDER
-function updateOrder(){
-  const grid = document.getElementById("grid");
-  const newPosts = [];
-
-  grid.querySelectorAll(".post").forEach(el => {
-    const index = el.dataset.index;
-    newPosts.push(posts[index]);
-  });
-
-  posts = newPosts;
-  render();
-}
-
-// INIT
 loadPosts();
 
 </script>
