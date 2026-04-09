@@ -132,54 +132,26 @@ async function loadPosts(){
 // RENDER
 function render(){
   const grid = document.getElementById("grid");
-  grid.innerHTML = "";
 
-  posts.forEach((post, index) => {
-    const div = document.createElement("div");
-    div.className = "post";
-    div.draggable = true;
-
-    // 🖼 IMAGE / CAROUSEL / VIDEO
-   if(post.media.length > 1){
-  div.innerHTML = `
-    <div class="carousel">
-      <div class="carousel-track">
-        ${post.media.map(m => `<img src="${m}">`).join("")}
-      </div>
-
-      <button class="carousel-btn left">‹</button>
-      <button class="carousel-btn right">›</button>
-    </div>
-  `;
-}
-    else if(post.type === "video"){
-      div.innerHTML = `<video src="${post.media[0]}" autoplay muted loop></video>`;
-    }
-    else{
-      div.innerHTML = `<img src="${post.media[0]}">`;
-    }
-    if(post.media.length > 1){
-  const track = div.querySelector(".carousel-track");
-  const leftBtn = div.querySelector(".left");
-  const rightBtn = div.querySelector(".right");
-
-  let currentIndex = 0;
-  const total = post.media.length;
-
-  function updateCarousel(){
-    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+  if(!grid){
+    console.error("❌ GRID INTROUVABLE");
+    return;
   }
 
-  leftBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    currentIndex = Math.max(0, currentIndex - 1);
-    updateCarousel();
-  });
+  console.log("POSTS:", posts);
 
-  rightBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    currentIndex = Math.min(total - 1, currentIndex + 1);
-    updateCarousel();
+  grid.innerHTML = "";
+
+  posts.forEach(post => {
+    const div = document.createElement("div");
+
+    div.style.background = "red";
+    div.style.height = "100px";
+    div.style.margin = "10px";
+
+    div.innerText = post.title;
+
+    grid.appendChild(div);
   });
 }
 
