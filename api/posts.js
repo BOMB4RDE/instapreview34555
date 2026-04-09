@@ -1,4 +1,9 @@
 export default async function handler(req, res) {
+
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET");
+
+  // ton code existant ici 👇
   try {
     const NOTION_TOKEN = process.env.NOTION_TOKEN;
     const DATABASE_ID = process.env.DATABASE_ID;
