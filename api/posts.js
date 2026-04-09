@@ -1,6 +1,6 @@
 module.exports = async (req, res) => {
 
-  // ✅ CORS HEADERS
+  // ✅ CORS (obligatoire)
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -10,10 +10,18 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // 👉 TEST DATA (on simplifie pour que ça marche sûr)
     const posts = [
       {
-        title: "test",
+        title: "Post 1",
         media: ["https://via.placeholder.com/300"]
+      },
+      {
+        title: "Carousel",
+        media: [
+          "https://via.placeholder.com/300",
+          "https://via.placeholder.com/301"
+        ]
       }
     ];
 
