@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<style>
+<title>Instagram Grid Widget</title>
 
+<style>
 body {
   margin: 0;
   background: #f5f5f5;
@@ -12,8 +13,6 @@ body {
 
 .header {
   padding: 10px;
-  display: flex;
-  justify-content: space-between;
 }
 
 button {
@@ -52,6 +51,14 @@ button {
   font-size: 12px;
 }
 
+/* media */
+img, video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* carousel */
 .carousel {
   display: flex;
   overflow-x: auto;
@@ -61,12 +68,31 @@ button {
   min-width: 100%;
 }
 
-img, video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* drag UX */
+.post.dragging {
+  opacity: 0;
 }
 
+.drag-preview {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  transform: scale(1.05);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.placeholder {
+  background: rgba(0,0,0,0.1);
+  border-radius: 12px;
+}
+
+.grid .post {
+  transition: all 0.2s ease;
+}
 </style>
 </head>
 
@@ -82,12 +108,14 @@ img, video {
 
 let posts = [];
 
+// 🔄 LOAD DATA FROM API
 async function loadPosts(){
   const res = await fetch("/api/posts");
   posts = await res.json();
   render();
 }
 
+// 🎨 RENDER GRID
 function render(){
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
@@ -95,7 +123,6 @@ function render(){
   posts.forEach((post, i) => {
     const div = document.createElement("div");
     div.className = "post";
-    div.draggable = true;
     div.dataset.index = i;
     div.dataset.title = post.title;
 
@@ -117,66 +144,94 @@ function render(){
   enableDrag();
 }
 
-function enableDrag(){
+// 🧠 DRAG SYSTEM PRO
+let dragEl = null;
+let preview = null;
+let placeholder = null;
+
+function enableDrag() {
   const grid = document.getElementById("grid");
 
-  let draggedIndex = null;
+  grid.querySelectorAll(".post").forEach((el) => {
 
-  grid.querySelectorAll(".post").forEach((item, index) => {
-    item.draggable = true;
+    el.addEventListener("mousedown", (e) => {
+      dragEl = el;
 
-    item.addEventListener("dragstart", () => {
-      draggedIndex = index;
-      item.classList.add("dragging");
+      // preview
+      preview = el.cloneNode(true);
+      preview.classList.add("drag-preview");
+      document.body.appendChild(preview);
+
+      movePreview(e);
+
+      // placeholder
+      placeholder = document.createElement("div");
+      placeholder.className = "post placeholder";
+
+      el.classList.add("dragging");
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
     });
-
-    item.addEventListener("dragend", () => {
-      item.classList.remove("dragging");
-    });
-  });
-
-  grid.addEventListener("dragover", (e) => {
-    e.preventDefault();
-
-    const afterElement = getClosestElement(grid, e.clientX, e.clientY);
-    const draggingEl = document.querySelector(".dragging");
-
-    if (!afterElement) {
-      grid.appendChild(draggingEl);
-    } else {
-      grid.insertBefore(draggingEl, afterElement);
-    }
-  });
-
-  grid.addEventListener("drop", () => {
-    updateOrder();
   });
 }
 
-  function getClosestElement(container, x, y) {
-  const elements = [...container.querySelectorAll(".post:not(.dragging)")];
+function movePreview(e) {
+  preview.style.left = e.clientX - 60 + "px";
+  preview.style.top = e.clientY - 60 + "px";
+}
+
+function onMove(e) {
+  movePreview(e);
+
+  const grid = document.getElementById("grid");
+  const items = [...grid.querySelectorAll(".post:not(.dragging)")];
 
   let closest = null;
-  let closestDistance = Infinity;
+  let minDist = Infinity;
 
-  elements.forEach(el => {
-    const rect = el.getBoundingClientRect();
+  items.forEach(item => {
+    const rect = item.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
 
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
 
-    const distance = Math.hypot(x - centerX, y - centerY);
-
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closest = el;
+    if (dist < minDist) {
+      minDist = dist;
+      closest = item;
     }
   });
 
-  return closest;
+  if (closest) {
+    grid.insertBefore(placeholder, closest);
+  }
 }
 
-  function updateOrder(){
+function onUp() {
+  const grid = document.getElementById("grid");
+
+  if (placeholder && dragEl) {
+    grid.insertBefore(dragEl, placeholder);
+  }
+
+  dragEl.classList.remove("dragging");
+
+  preview.remove();
+  placeholder.remove();
+
+  preview = null;
+  placeholder = null;
+  dragEl = null;
+
+  updateOrder();
+
+  document.removeEventListener("mousemove", onMove);
+  document.removeEventListener("mouseup", onUp);
+}
+
+// 🔄 UPDATE ORDER
+function updateOrder(){
   const grid = document.getElementById("grid");
   const newPosts = [];
 
@@ -189,6 +244,7 @@ function enableDrag(){
   render();
 }
 
+// INIT
 loadPosts();
 
 </script>
