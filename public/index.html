@@ -176,6 +176,19 @@ function enableDrag(){
   return closest;
 }
 
+  function updateOrder(){
+  const grid = document.getElementById("grid");
+  const newPosts = [];
+
+  grid.querySelectorAll(".post").forEach(el => {
+    const index = el.dataset.index;
+    newPosts.push(posts[index]);
+  });
+
+  posts = newPosts;
+  render();
+}
+
 loadPosts();
 
 </script>
