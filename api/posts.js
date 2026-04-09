@@ -1,17 +1,15 @@
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
 
-  // 🔥 CORS HEADERS
+  // ✅ CORS HEADERS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // 🔥 gérer preflight (important)
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
   try {
-    // 👉 TON CODE NOTION ICI
     const posts = [
       {
         title: "test",
@@ -19,9 +17,9 @@ export default async function handler(req, res) {
       }
     ];
 
-    return res.status(200).json(posts);
+    res.status(200).json(posts);
 
-  } catch (error) {
-    return res.status(500).json({ error: "Erreur serveur" });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
   }
-}
+};
