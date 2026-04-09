@@ -118,26 +118,62 @@ function render(){
 }
 
 function enableDrag(){
-  const items = document.querySelectorAll(".post");
-
-  items.forEach(item => {
-    item.addEventListener("dragstart", () => item.classList.add("dragging"));
-    item.addEventListener("dragend", () => item.classList.remove("dragging"));
-  });
-
   const grid = document.getElementById("grid");
 
-  grid.addEventListener("dragover", e => {
-    e.preventDefault();
-    const dragging = document.querySelector(".dragging");
-    const after = [...grid.children].find(child => {
-      const box = child.getBoundingClientRect();
-      return e.clientY < box.top + box.height / 2;
+  let draggedIndex = null;
+
+  grid.querySelectorAll(".post").forEach((item, index) => {
+    item.draggable = true;
+
+    item.addEventListener("dragstart", () => {
+      draggedIndex = index;
+      item.classList.add("dragging");
     });
 
-    if(after) grid.insertBefore(dragging, after);
-    else grid.appendChild(dragging);
+    item.addEventListener("dragend", () => {
+      item.classList.remove("dragging");
+    });
   });
+
+  grid.addEventListener("dragover", (e) => {
+    e.preventDefault();
+
+    const afterElement = getClosestElement(grid, e.clientX, e.clientY);
+    const draggingEl = document.querySelector(".dragging");
+
+    if (!afterElement) {
+      grid.appendChild(draggingEl);
+    } else {
+      grid.insertBefore(draggingEl, afterElement);
+    }
+  });
+
+  grid.addEventListener("drop", () => {
+    updateOrder();
+  });
+}
+
+  function getClosestElement(container, x, y) {
+  const elements = [...container.querySelectorAll(".post:not(.dragging)")];
+
+  let closest = null;
+  let closestDistance = Infinity;
+
+  elements.forEach(el => {
+    const rect = el.getBoundingClientRect();
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const distance = Math.hypot(x - centerX, y - centerY);
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closest = el;
+    }
+  });
+
+  return closest;
 }
 
 loadPosts();
