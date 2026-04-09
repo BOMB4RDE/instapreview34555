@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+body {
+  margin: 0;
+  background: #f5f5f5;
+  font-family: sans-serif;
+}
+
+/* empêche sélection texte */
+* {
+  user-select: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px;
+}
+
+.post {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ddd;
+  position: relative;
+  cursor: grab;
+}
+
+/* media */
+img, video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* carousel */
+.carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.carousel img {
+  min-width: 100%;
+  scroll-snap-align: start;
+}
+
+/* drag */
+.dragging {
+  opacity: 0.3;
+}
+
+  .carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.carousel-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.carousel-track img {
+  min-width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* flèches */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.5);
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: none;
+}
+
+.carousel:hover .carousel-btn {
+  display: block;
+}
+
+.carousel-btn.left {
+  left: 5px;
+}
+
+.carousel-btn.right {
+  right: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="grid" id="grid"></div>
+
+<script>
+
+let posts = [];
+let draggedIndex = null;
+
+// LOAD DATA
+async function loadPosts(){
+  const res = await fetch("/api/posts");
+  posts = await res.json();
+  render();
+}
+
+// RENDER
+function render(){
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  posts.forEach((post, index) => {
+    const div = document.createElement("div");
+    div.className = "post";
+    div.draggable = true;
+
+    // 🖼 IMAGE / CAROUSEL / VIDEO
+   if(post.media.length > 1){
+  div.innerHTML = `
+    <div class="carousel">
+      <div class="carousel-track">
+        ${post.media.map(m => `<img src="${m}">`).join("")}
+      </div>
+
+      <button class="carousel-btn left">‹</button>
+      <button class="carousel-btn right">›</button>
+    </div>
+  `;
+}
+    else if(post.type === "video"){
+      div.innerHTML = `<video src="${post.media[0]}" autoplay muted loop></video>`;
+    }
+    else{
+      div.innerHTML = `<img src="${post.media[0]}">`;
+    }
+    if(post.media.length > 1){
+  const track = div.querySelector(".carousel-track");
+  const leftBtn = div.querySelector(".left");
+  const rightBtn = div.querySelector(".right");
+
+  let currentIndex = 0;
+  const total = post.media.length;
+
+  function updateCarousel(){
+    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+  }
+
+  leftBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    currentIndex = Math.max(0, currentIndex - 1);
+    updateCarousel();
+  });
+
+  rightBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    currentIndex = Math.min(total - 1, currentIndex + 1);
+    updateCarousel();
+  });
+}
+
+    // DRAG EVENTS
+    div.addEventListener("dragstart", () => {
+      draggedIndex = index;
+      div.classList.add("dragging");
+    });
+
+    div.addEventListener("dragend", () => {
+      div.classList.remove("dragging");
+    });
+
+    div.addEventListener("dragover", (e) => {
+      e.preventDefault();
+    });
+
+    div.addEventListener("drop", () => {
+      const temp = posts[draggedIndex];
+      posts.splice(draggedIndex, 1);
+      posts.splice(index, 0, temp);
+      render();
+    });
+
+    grid.appendChild(div);
+  });
+}
+
+loadPosts();
+
+</script>
+
+</body>
+</html>
